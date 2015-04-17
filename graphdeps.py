@@ -45,10 +45,10 @@ penWidth = 1
 #Have one HEADER (and only one) uncommented at a time, or the last uncommented value will be the only one considered
 
 #Left to right layout, my favorite, ganntt-ish
-#HEADER = "digraph  dependencies { splines=true; overlap=ortho; rankdir=LR; weight=2;"
+HEADER = "digraph  dependencies { splines=true; overlap=ortho; rankdir=LR; weight=2;"
 
 #Spread tasks on page
-HEADER = "digraph  dependencies { layout=neato;   splines=true; overlap=scalexy;  rankdir=LR; weight=2;"
+#HEADER = "digraph  dependencies { layout=neato;   splines=true; overlap=scalexy;  rankdir=LR; weight=2;"
 
 #More information on setting up graphviz: http://www.graphviz.org/doc/info/attrs.html
 
