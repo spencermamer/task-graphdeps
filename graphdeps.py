@@ -6,12 +6,12 @@ import sys
 import textwrap
 
 
-
 # Typical command line usage:
 #
 # python graphdeps.py TASKFILTER
 #
-# TASKFILTER is a taskwarrior filter, documentation can be found here: http://taskwarrior.org/projects/taskwarrior/wiki/Feature_filters
+# TASKFILTER is a taskwarrior filter, documentation can be found here:
+# http://taskwarrior.org/projects/taskwarrior/wiki/Feature_filters
 #
 # Probably the most helpful commands are:
 #
@@ -28,29 +28,31 @@ import textwrap
 #  --> graphs everything - could be massive
 #
 
-#Wrap label text at this number of characters
-charsPerLine = 20;
+# Wrap label text at this number of characters
+CHARS_PER_LINE = 20
 
-#full list of colors here: http://www.graphviz.org/doc/info/colors.html
-blockedColor = 'gold4'
-maxUrgencyColor = 'red2' #color of the tasks that have absolutely the highest urgency
-unblockedColor = 'green'
-doneColor = 'grey'
-waitColor = 'white'
-deletedColor = 'pink';
+# Full list of colors here: http://www.graphviz.org/doc/info/colors.html
+COLOR_BLOCKED = 'gold4'
+COLOR_MAX_URGENCY = 'red2'  # color of tasks with the highest urgency
+COLOR_UNBLOCKED = 'green'
+COLOR_DONE = 'grey'
+COLOR_WAIT = 'white'
+COLOR_DELETED = 'pink'
 
-#The width of the border around the tasks:
-penWidth = 1
+# The width of the border around the tasks:
+BORDER_WIDTH = 1
 
-#Have one HEADER (and only one) uncommented at a time, or the last uncommented value will be the only one considered
+# Have one HEADER (and only one) uncommented at a time, or the last uncommented
+# value will be the only one considered
 
-#Left to right layout, my favorite, ganntt-ish
-HEADER = "digraph  dependencies { splines=true; overlap=ortho; rankdir=LR; weight=2;"
+# Left to right layout, my favorite, ganntt-ish
+HEADER = "digraph dependencies { splines=true; overlap=ortho; rankdir=LR; weight=2;"
 
-#Spread tasks on page
-#HEADER = "digraph  dependencies { layout=neato;   splines=true; overlap=scalexy;  rankdir=LR; weight=2;"
+# Spread tasks on page
+# HEADER = "digraph dependencies { layout=neato; splines=true; overlap=scalexy; rankdir=LR; weight=2;"
 
-#More information on setting up graphviz: http://www.graphviz.org/doc/info/attrs.html
+# More information on setting up graphviz:
+# http://www.graphviz.org/doc/info/attrs.html
 
 
 #-----------------------------------------#
@@ -59,11 +61,7 @@ HEADER = "digraph  dependencies { splines=true; overlap=ortho; rankdir=LR; weigh
 
 FOOTER = "}"
 
-JSON_START = '['
-JSON_END = ']'
-
-validUuids = list()
-
+valid_uuids = list()
 
 
 def call_taskwarrior(cmd):
@@ -71,96 +69,93 @@ def call_taskwarrior(cmd):
     tw = Popen(['task'] + cmd.split(), stdout=PIPE, stderr=PIPE)
     return tw.communicate()
 
-def get_json(query):
+
+def get_json(query_parsed):
     'call taskwarrior, returning objects from json'
-    result, err = call_taskwarrior('export %s rc.json.array=on rc.verbose=nothing' % query)
+    result, err = call_taskwarrior('export %s rc.json.array=on rc.verbose=nothing' % query_parsed)
     return json.loads(result)
+
 
 def call_dot(instr):
     'call dot, returning stdout and stdout'
     dot = Popen('dot -T png'.split(), stdout=PIPE, stderr=PIPE, stdin=PIPE)
     return dot.communicate(instr)
 
+
 if __name__ == '__main__':
     query = sys.argv[1:]
-    print ('Calling TaskWarrior')
+    print('Calling TaskWarrior')
     data = get_json(' '.join(query))
-    #print data
 
-    maxUrgency = -9999;
+    max_urgency = -9999
     for datum in data:
-        if float(datum['urgency']) > maxUrgency:
-            maxUrgency = float(datum['urgency'])
-
+        if float(datum['urgency']) > max_urgency:
+            max_urgency = int(datum['urgency'])
 
     # first pass: labels
     lines = [HEADER]
-    print ('Printing Labels')
+    print('Printing Labels')
     for datum in data:
-        validUuids.append(datum['uuid'])
+        valid_uuids.append(datum['uuid'])
         if datum['description']:
 
             style = ''
             color = ''
             style = 'filled'
 
-            if datum['status']=='pending':
+            if datum['status'] == 'pending':
                 prefix = datum['id']
-                if not datum.get('depends','') : color = unblockedColor
-                else :
+                if not datum.get('depends', ''): color = COLOR_UNBLOCKED
+                else:
                     hasPendingDeps = 0
                     for depend in datum['depends'].split(','):
                         for datum2 in data:
                             if datum2['uuid'] == depend and datum2['status'] == 'pending':
                                hasPendingDeps = 1
-                    if hasPendingDeps == 1 : color = blockedColor
-                    else : color = unblockedColor
+                    if hasPendingDeps == 1: color = COLOR_BLOCKED
+                    else: color = COLOR_UNBLOCKED
 
             elif datum['status'] == 'waiting':
                 prefix = 'WAIT'
-                color = waitColor
+                color = COLOR_WAIT
             elif datum['status'] == 'completed':
                 prefix = 'DONE'
-                color = doneColor
+                color = COLOR_DONE
             elif datum['status'] == 'deleted':
                 prefix = 'DELETED'
-                color = deletedColor
+                color = COLOR_DELETED
             else:
                 prefix = ''
                 color = 'white'
 
-            if float(datum['urgency']) == maxUrgency:
-                color = maxUrgencyColor
+            if float(datum['urgency']) == max_urgency:
+                color = COLOR_MAX_URGENCY
 
-            label = '';
-            descriptionLines = textwrap.wrap(datum['description'],charsPerLine);
+            label = ''
+            descriptionLines = textwrap.wrap(datum['description'], CHARS_PER_LINE)
             for descLine in descriptionLines:
-                label += descLine+"\\n";
+                label += descLine+"\\n"
 
-            lines.append('"%s"[shape=box][penwidth=%d][label="%s\:%s"][fillcolor=%s][style=%s]' % (datum['uuid'], penWidth, prefix, label, color, style))
-            #documentation http://www.graphviz.org/doc/info/attrs.html
-
-
+            lines.append( '"%s"[shape=box][BORDER_WIDTH=%d][label="%s\:%s"][fillcolor=%s][style=%s]' % (datum['uuid'], BORDER_WIDTH, prefix, label, color, style))
+            # documentation http://www.graphviz.org/doc/info/attrs.html
 
     # second pass: dependencies
-    print ('Resolving Dependencies')
+    print('Resolving Dependencies')
     for datum in data:
         if datum['description']:
             for dep in datum.get('depends', '').split(','):
-                #print ("\naaa %s" %dep)
-                if dep!='' and dep in validUuids:
+                if dep != '' and dep in valid_uuids:
                     lines.append('"%s" -> "%s";' % (dep, datum['uuid']))
                     continue
 
     lines.append(FOOTER)
 
-    print ('Calling dot')
+    print('Calling dot')
     png, err = call_dot('\n'.join(lines).encode('utf-8'))
     if err not in ('', b''):
-        print ('Error calling dot:')
-        print (err.strip())
+        print('Error calling dot:')
+        print(err.strip())
 
-
-    print ('Writing to deps.png')
+    print('Writing to deps.png')
     with open('deps.png', 'wb') as f:
         f.write(png)
