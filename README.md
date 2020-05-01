@@ -13,3 +13,6 @@ python graphdeps.py project:fooproject status:pending
 ```
 
 ![Example deps.png file](example.png)
+
+## Installation
+To use `graphdeps.py` system-wide, install or create a link to `/usr/local/bin`.
