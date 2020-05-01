@@ -104,7 +104,7 @@ if __name__ == '__main__':
             style = 'filled'
 
             if datum['status'] == 'pending':
-                prefix = datum['id']
+                prefix = str(datum['id']) + '\: '
                 if not datum.get('depends', ''): color = COLOR_UNBLOCKED
                 else:
                     hasPendingDeps = 0
@@ -116,13 +116,13 @@ if __name__ == '__main__':
                     else: color = COLOR_UNBLOCKED
 
             elif datum['status'] == 'waiting':
-                prefix = 'WAIT'
+                prefix = 'WAIT: '
                 color = COLOR_WAIT
             elif datum['status'] == 'completed':
-                prefix = 'DONE'
+                prefix = 'DONE: '
                 color = COLOR_DONE
             elif datum['status'] == 'deleted':
-                prefix = 'DELETED'
+                prefix = 'DELETED: '
                 color = COLOR_DELETED
             else:
                 prefix = ''
@@ -136,7 +136,7 @@ if __name__ == '__main__':
             for descLine in descriptionLines:
                 label += descLine+"\\n"
 
-            lines.append( '"%s"[shape=box][BORDER_WIDTH=%d][label="%s\:%s"][fillcolor=%s][style=%s]' % (datum['uuid'], BORDER_WIDTH, prefix, label, color, style))
+            lines.append('"%s"[shape=box][BORDER_WIDTH=%d][label="%s%s"][fillcolor=%s][style=%s]' % (datum['uuid'], BORDER_WIDTH, prefix, label, color, style))
             # documentation http://www.graphviz.org/doc/info/attrs.html
 
     # second pass: dependencies
