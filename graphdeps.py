@@ -74,7 +74,7 @@ def call_taskwarrior(cmd):
 def get_json(query):
     'call taskwarrior, returning objects from json'
     result, err = call_taskwarrior('export %s rc.json.array=on rc.verbose=nothing' % query)
-    return json.loads(str(result))
+    return json.loads(result)
 
 def call_dot(instr):
     'call dot, returning stdout and stdout'
@@ -155,12 +155,12 @@ if __name__ == '__main__':
     lines.append(FOOTER)
 
     print ('Calling dot')
-    png, err = call_dot('\n'.join(lines))
-    if err != '':
+    png, err = call_dot('\n'.join(lines).encode('utf-8'))
+    if err not in ('', b''):
         print ('Error calling dot:')
         print (err.strip())
 
 
     print ('Writing to deps.png')
-    with open('deps.png', 'w') as f:
+    with open('deps.png', 'wb') as f:
         f.write(png)
