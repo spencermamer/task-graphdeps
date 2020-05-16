@@ -111,7 +111,7 @@ if __name__ == '__main__':
                     for depend in datum['depends'].split(','):
                         for datum2 in data:
                             if datum2['uuid'] == depend and datum2['status'] == 'pending':
-                               hasPendingDeps = 1
+                                hasPendingDeps = 1
                     if hasPendingDeps == 1: color = COLOR_BLOCKED
                     else: color = COLOR_UNBLOCKED
 
@@ -136,7 +136,7 @@ if __name__ == '__main__':
             for descLine in descriptionLines:
                 label += descLine+"\\n"
 
-            lines.append('"%s"[shape=box][BORDER_WIDTH=%d][label="%s%s"][fillcolor=%s][style=%s]' % (datum['uuid'], BORDER_WIDTH, prefix, label, color, style))
+            lines.append('"%s"[shape=box][BORDER_WIDTH=%d][label="%s:%s"][fillcolor=%s][style=%s]' % (datum['uuid'], BORDER_WIDTH, prefix, label, color, style))
             # documentation http://www.graphviz.org/doc/info/attrs.html
 
     # second pass: dependencies
