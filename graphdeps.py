@@ -82,8 +82,7 @@ def call_dot(instr):
     return dot.communicate(instr)
 
 
-if __name__ == '__main__':
-    query = sys.argv[1:]
+def main(query):
     print('Calling TaskWarrior')
     data = get_json(' '.join(query))
 
@@ -159,3 +158,7 @@ if __name__ == '__main__':
     print('Writing to deps.png')
     with open('deps.png', 'wb') as f:
         f.write(png)
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
