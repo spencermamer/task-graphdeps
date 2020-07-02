@@ -72,7 +72,8 @@ def call_taskwarrior(cmd):
 
 def get_json(query_parsed):
     """Call taskwarrior, returning objects from json"""
-    result, err = call_taskwarrior('export %s rc.json.array=on rc.verbose=nothing' % query_parsed)
+    result, err = call_taskwarrior(
+        'export %s rc.json.array=on rc.verbose=nothing' % query_parsed)
     return json.loads(result)
 
 
@@ -93,7 +94,7 @@ def main(query):
 
     # first pass: labels
     lines = [HEADER]
-    print('Printing Labels')
+    print('Printing labels')
     for datum in data:
         valid_uuids.append(datum['uuid'])
         if datum['description']:
@@ -104,15 +105,18 @@ def main(query):
 
             if datum['status'] == 'pending':
                 prefix = str(datum['id']) + '\: '
-                if not datum.get('depends', ''): color = COLOR_UNBLOCKED
+                if not datum.get('depends', ''):
+                    color = COLOR_UNBLOCKED
                 else:
                     has_pending_deps = 0
                     for depend in datum['depends'].split(','):
                         for datum2 in data:
                             if datum2['uuid'] == depend and datum2['status'] == 'pending':
                                 has_pending_deps = 1
-                    if has_pending_deps == 1: color = COLOR_BLOCKED
-                    else: color = COLOR_UNBLOCKED
+                    if has_pending_deps == 1:
+                        color = COLOR_BLOCKED
+                    else:
+                        color = COLOR_UNBLOCKED
 
             elif datum['status'] == 'waiting':
                 prefix = 'WAIT: '
@@ -131,15 +135,17 @@ def main(query):
                 color = COLOR_MAX_URGENCY
 
             label = ''
-            description_lines = textwrap.wrap(datum['description'], CHARS_PER_LINE)
+            description_lines = textwrap.wrap(
+                datum['description'], CHARS_PER_LINE)
             for desc_line in description_lines:
                 label += desc_line + "\\n"
 
-            lines.append('"%s"[shape=box][BORDER_WIDTH=%d][label="%s%s"][fillcolor=%s][style=%s]' % (datum['uuid'], BORDER_WIDTH, prefix, label, color, style))
+            lines.append('"%s"[shape=box][BORDER_WIDTH=%d][label="%s%s"][fillcolor=%s][style=%s]' % (
+                datum['uuid'], BORDER_WIDTH, prefix, label, color, style))
             # documentation http://www.graphviz.org/doc/info/attrs.html
 
     # second pass: dependencies
-    print('Resolving Dependencies')
+    print('Resolving dependencies')
     for datum in data:
         if datum['description']:
             for dep in datum.get('depends', '').split(','):
@@ -155,8 +161,9 @@ def main(query):
         print('Error calling dot:')
         print(err.strip())
 
-    print('Writing to deps.png')
-    with open('deps.png', 'wb') as f:
+    filename = 'deps.png'
+    print('Writing to ' + filename)
+    with open(filename, 'wb') as f:
         f.write(png)
 
 
