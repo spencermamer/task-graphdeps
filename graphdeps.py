@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """Graph dependencies in projects"""
+import argparse
 import json
 from subprocess import Popen, PIPE
 import sys
@@ -83,7 +84,7 @@ def call_dot(instr):
     return dot.communicate(instr)
 
 
-def main(query):
+def main(query, output):
     print('Calling TaskWarrior')
     data = get_json(' '.join(query))
 
@@ -161,11 +162,17 @@ def main(query):
         print('Error calling dot:')
         print(err.strip())
 
-    filename = 'deps.png'
-    print('Writing to ' + filename)
-    with open(filename, 'wb') as f:
+    print('Writing to ' + output)
+    with open(output, 'wb') as f:
         f.write(png)
 
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    parser = argparse.ArgumentParser(description='Create dependency trees')
+    parser.add_argument('query', nargs='+',
+                       help='Taskwarrior query')
+    parser.add_argument('-o', '--output', default='deps.png',
+                       help='output filename')
+
+    args = parser.parse_args()
+    main(args.query, args.output)
