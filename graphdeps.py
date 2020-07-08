@@ -46,8 +46,8 @@ BORDER_WIDTH = 1
 # value will be the only one considered
 
 # Left to right layout, my favorite, ganntt-ish
-HEADER = "digraph dependencies { splines=true; overlap=ortho; rankdir=LR; "\
-         "weight=2;"
+HEADER = ("digraph dependencies { splines=true; overlap=ortho; rankdir=LR; "
+          "weight=2;")
 
 # Spread tasks on page
 # HEADER = "digraph dependencies { layout=neato; splines=true; "\
@@ -155,8 +155,11 @@ def main(query, output, quiet):
             for desc_line in description_lines:
                 label += desc_line + "\\n"
 
-            lines.append('"%s"[shape=box][BORDER_WIDTH=%d][label="%s%s"][fillcolor=%s][style=%s]' % (
-                datum['uuid'], BORDER_WIDTH, prefix, label, color, style))
+            lines.append(
+                '"{}"[shape=box][BORDER_WIDTH={}][label="{}{}"][fillcolor={}]'
+                '[style={}]'.format(
+                                    datum['uuid'], BORDER_WIDTH, prefix, label,
+                                    color, style))
             # documentation http://www.graphviz.org/doc/info/attrs.html
 
     # second pass: dependencies
