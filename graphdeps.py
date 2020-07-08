@@ -3,7 +3,6 @@
 import argparse
 import json
 from subprocess import Popen, PIPE
-import sys
 import textwrap
 
 
@@ -47,10 +46,12 @@ BORDER_WIDTH = 1
 # value will be the only one considered
 
 # Left to right layout, my favorite, ganntt-ish
-HEADER = "digraph dependencies { splines=true; overlap=ortho; rankdir=LR; weight=2;"
+HEADER = "digraph dependencies { splines=true; overlap=ortho; rankdir=LR; "\
+         "weight=2;"
 
 # Spread tasks on page
-# HEADER = "digraph dependencies { layout=neato; splines=true; overlap=scalexy; rankdir=LR; weight=2;"
+# HEADER = "digraph dependencies { layout=neato; splines=true; "\
+#          "overlap=scalexy; rankdir=LR; weight=2;"
 
 # More information on setting up graphviz:
 # http://www.graphviz.org/doc/info/attrs.html
@@ -63,6 +64,12 @@ HEADER = "digraph dependencies { splines=true; overlap=ortho; rankdir=LR; weight
 FOOTER = "}"
 
 valid_uuids = list()
+
+
+def quiet_print(msg, quiet):
+    """Print only if quiet=False (default)"""
+    if not quiet:
+        print(msg)
 
 
 def call_taskwarrior(cmd):
@@ -84,8 +91,14 @@ def call_dot(instr):
     return dot.communicate(instr)
 
 
-def main(query, output):
-    print('Calling TaskWarrior')
+def main(query, output, quiet):
+    """Generate dependency trees"""
+    # query  - a list containing a single item
+    # output - a string containing the filename with extension
+    # quiet  - a boolean (False by default) that will print quiet_print
+    #          statements if False
+
+    quiet_print('Calling TaskWarrior', quiet)
     data = get_json(' '.join(query))
 
     max_urgency = -9999
@@ -95,7 +108,7 @@ def main(query, output):
 
     # first pass: labels
     lines = [HEADER]
-    print('Printing labels')
+    quiet_print('Printing labels', quiet)
     for datum in data:
         valid_uuids.append(datum['uuid'])
         if datum['description']:
@@ -112,7 +125,8 @@ def main(query, output):
                     has_pending_deps = 0
                     for depend in datum['depends'].split(','):
                         for datum2 in data:
-                            if datum2['uuid'] == depend and datum2['status'] == 'pending':
+                            if (datum2['uuid'] == depend and
+                                    datum2['status'] == 'pending'):
                                 has_pending_deps = 1
                     if has_pending_deps == 1:
                         color = COLOR_BLOCKED
@@ -146,7 +160,7 @@ def main(query, output):
             # documentation http://www.graphviz.org/doc/info/attrs.html
 
     # second pass: dependencies
-    print('Resolving dependencies')
+    quiet_print('Resolving dependencies', quiet)
     for datum in data:
         if datum['description']:
             for dep in datum.get('depends', '').split(','):
@@ -156,13 +170,13 @@ def main(query, output):
 
     lines.append(FOOTER)
 
-    print('Calling dot')
+    quiet_print('Calling dot', quiet)
     png, err = call_dot('\n'.join(lines).encode('utf-8'))
     if err not in ('', b''):
         print('Error calling dot:')
         print(err.strip())
 
-    print('Writing to ' + output)
+    quiet_print('Writing to ' + output, quiet)
     with open(output, 'wb') as f:
         f.write(png)
 
@@ -170,9 +184,11 @@ def main(query, output):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Create dependency trees')
     parser.add_argument('query', nargs='+',
-                       help='Taskwarrior query')
+                        help='Taskwarrior query')
     parser.add_argument('-o', '--output', default='deps.png',
-                       help='output filename')
+                        help='output filename')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='suppress output messages')
 
     args = parser.parse_args()
-    main(args.query, args.output)
+    main(args.query, args.output, args.quiet)
