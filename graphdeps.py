@@ -92,11 +92,14 @@ def call_dot(instr):
 
 
 def main(query, output, quiet):
-    """Generate dependency trees"""
-    # query  - a list containing a single item
-    # output - a string containing the filename with extension
-    # quiet  - a boolean (False by default) that will print quiet_print
-    #          statements if False
+    """
+    Generate dependency trees
+
+    :param query: a list where each element is a filter
+    :param output: a string containing the filename with extension
+    :param quiet: a boolean (False by default) that will print quiet_print
+                  statements if False
+    """
 
     quiet_print('Calling TaskWarrior', quiet)
     data = get_json(' '.join(query))
