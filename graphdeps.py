@@ -1,17 +1,17 @@
 #!/usr/bin/env python
-'graph dependencies in projects'
+"""Graph dependencies in projects"""
+import argparse
 import json
 from subprocess import Popen, PIPE
-import sys
 import textwrap
-
 
 
 # Typical command line usage:
 #
 # python graphdeps.py TASKFILTER
 #
-# TASKFILTER is a taskwarrior filter, documentation can be found here: http://taskwarrior.org/projects/taskwarrior/wiki/Feature_filters
+# TASKFILTER is a taskwarrior filter, documentation can be found here:
+# http://taskwarrior.org/projects/taskwarrior/wiki/Feature_filters
 #
 # Probably the most helpful commands are:
 #
@@ -28,29 +28,33 @@ import textwrap
 #  --> graphs everything - could be massive
 #
 
-#Wrap label text at this number of characters
-charsPerLine = 20;
+# Wrap label text at this number of characters
+CHARS_PER_LINE = 20
 
-#full list of colors here: http://www.graphviz.org/doc/info/colors.html
-blockedColor = 'gold4'
-maxUrgencyColor = 'red2' #color of the tasks that have absolutely the highest urgency
-unblockedColor = 'green'
-doneColor = 'grey'
-waitColor = 'white'
-deletedColor = 'pink';
+# Full list of colors here: http://www.graphviz.org/doc/info/colors.html
+COLOR_BLOCKED = 'gold4'
+COLOR_MAX_URGENCY = 'red2'  # color of tasks with the highest urgency
+COLOR_UNBLOCKED = 'green'
+COLOR_DONE = 'grey'
+COLOR_WAIT = 'white'
+COLOR_DELETED = 'pink'
 
-#The width of the border around the tasks:
-penWidth = 1
+# The width of the border around the tasks:
+BORDER_WIDTH = 1
 
-#Have one HEADER (and only one) uncommented at a time, or the last uncommented value will be the only one considered
+# Have one HEADER (and only one) uncommented at a time, or the last uncommented
+# value will be the only one considered
 
-#Left to right layout, my favorite, ganntt-ish
-HEADER = "digraph  dependencies { splines=true; overlap=ortho; rankdir=LR; weight=2;"
+# Left to right layout, my favorite, ganntt-ish
+HEADER = ("digraph dependencies { splines=true; overlap=ortho; rankdir=LR; "
+          "weight=2;")
 
-#Spread tasks on page
-#HEADER = "digraph  dependencies { layout=neato;   splines=true; overlap=scalexy;  rankdir=LR; weight=2;"
+# Spread tasks on page
+# HEADER = "digraph dependencies { layout=neato; splines=true; "\
+#          "overlap=scalexy; rankdir=LR; weight=2;"
 
-#More information on setting up graphviz: http://www.graphviz.org/doc/info/attrs.html
+# More information on setting up graphviz:
+# http://www.graphviz.org/doc/info/attrs.html
 
 
 #-----------------------------------------#
@@ -59,108 +63,138 @@ HEADER = "digraph  dependencies { splines=true; overlap=ortho; rankdir=LR; weigh
 
 FOOTER = "}"
 
-JSON_START = '['
-JSON_END = ']'
+valid_uuids = list()
 
-validUuids = list()
 
+def quiet_print(msg, quiet):
+    """Print only if quiet=False (default)"""
+    if not quiet:
+        print(msg)
 
 
 def call_taskwarrior(cmd):
-    'call taskwarrior, returning output and error'
+    """Call taskwarrior, returning output and error"""
     tw = Popen(['task'] + cmd.split(), stdout=PIPE, stderr=PIPE)
     return tw.communicate()
 
-def get_json(query):
-    'call taskwarrior, returning objects from json'
-    result, err = call_taskwarrior('export %s rc.json.array=on rc.verbose=nothing' % query)
+
+def get_json(query_parsed):
+    """Call taskwarrior, returning objects from json"""
+    result, err = call_taskwarrior(
+        'export %s rc.json.array=on rc.verbose=nothing' % query_parsed)
     return json.loads(result)
 
+
 def call_dot(instr):
-    'call dot, returning stdout and stdout'
+    """Call dot, returning stdout and stdout"""
     dot = Popen('dot -T png'.split(), stdout=PIPE, stderr=PIPE, stdin=PIPE)
     return dot.communicate(instr)
 
-if __name__ == '__main__':
-    query = sys.argv[1:]
-    print ('Calling TaskWarrior')
+
+def main(query, output, quiet):
+    """
+    Generate dependency trees
+
+    :param query: a list where each element is a filter
+    :param output: a string containing the filename with extension
+    :param quiet: a boolean (False by default) that will print quiet_print
+                  statements if False
+    """
+
+    quiet_print('Calling TaskWarrior', quiet)
     data = get_json(' '.join(query))
-    #print data
 
-    maxUrgency = -9999;
+    max_urgency = -9999
     for datum in data:
-        if float(datum['urgency']) > maxUrgency:
-            maxUrgency = float(datum['urgency'])
-
+        if float(datum['urgency']) > max_urgency:
+            max_urgency = int(datum['urgency'])
 
     # first pass: labels
     lines = [HEADER]
-    print ('Printing Labels')
+    quiet_print('Printing labels', quiet)
     for datum in data:
-        validUuids.append(datum['uuid'])
+        valid_uuids.append(datum['uuid'])
         if datum['description']:
 
             style = ''
             color = ''
             style = 'filled'
 
-            if datum['status']=='pending':
-                prefix = datum['id']
-                if not datum.get('depends','') : color = unblockedColor
-                else :
-                    hasPendingDeps = 0
+            if datum['status'] == 'pending':
+                prefix = str(datum['id']) + '\: '
+                if not datum.get('depends', ''):
+                    color = COLOR_UNBLOCKED
+                else:
+                    has_pending_deps = 0
                     for depend in datum['depends'].split(','):
                         for datum2 in data:
-                            if datum2['uuid'] == depend and datum2['status'] == 'pending':
-                               hasPendingDeps = 1
-                    if hasPendingDeps == 1 : color = blockedColor
-                    else : color = unblockedColor
+                            if (datum2['uuid'] == depend and
+                                    datum2['status'] == 'pending'):
+                                has_pending_deps = 1
+                    if has_pending_deps == 1:
+                        color = COLOR_BLOCKED
+                    else:
+                        color = COLOR_UNBLOCKED
 
             elif datum['status'] == 'waiting':
-                prefix = 'WAIT'
-                color = waitColor
+                prefix = 'WAIT: '
+                color = COLOR_WAIT
             elif datum['status'] == 'completed':
-                prefix = 'DONE'
-                color = doneColor
+                prefix = 'DONE: '
+                color = COLOR_DONE
             elif datum['status'] == 'deleted':
-                prefix = 'DELETED'
-                color = deletedColor
+                prefix = 'DELETED: '
+                color = COLOR_DELETED
             else:
                 prefix = ''
                 color = 'white'
 
-            if float(datum['urgency']) == maxUrgency:
-                color = maxUrgencyColor
+            if float(datum['urgency']) == max_urgency:
+                color = COLOR_MAX_URGENCY
 
-            label = '';
-            descriptionLines = textwrap.wrap(datum['description'],charsPerLine);
-            for descLine in descriptionLines:
-                label += descLine+"\\n";
+            label = ''
+            description_lines = textwrap.wrap(
+                datum['description'], CHARS_PER_LINE)
+            for desc_line in description_lines:
+                label += desc_line + "\\n"
 
-            lines.append('"%s"[shape=box][penwidth=%d][label="%s\:%s"][fillcolor=%s][style=%s]' % (datum['uuid'], penWidth, prefix, label, color, style))
-            #documentation http://www.graphviz.org/doc/info/attrs.html
-
-
+            lines.append(
+                '"{}"[shape=box][BORDER_WIDTH={}][label="{}{}"][fillcolor={}]'
+                '[style={}]'.format(
+                                    datum['uuid'], BORDER_WIDTH, prefix, label,
+                                    color, style))
+            # documentation http://www.graphviz.org/doc/info/attrs.html
 
     # second pass: dependencies
-    print ('Resolving Dependencies')
+    quiet_print('Resolving dependencies', quiet)
     for datum in data:
         if datum['description']:
             for dep in datum.get('depends', '').split(','):
-                #print ("\naaa %s" %dep)
-                if dep!='' and dep in validUuids:
+                if dep != '' and dep in valid_uuids:
                     lines.append('"%s" -> "%s";' % (dep, datum['uuid']))
                     continue
 
     lines.append(FOOTER)
 
-    print ('Calling dot')
+    quiet_print('Calling dot', quiet)
     png, err = call_dot('\n'.join(lines).encode('utf-8'))
     if err not in ('', b''):
-        print ('Error calling dot:')
-        print (err.strip())
+        print('Error calling dot:')
+        print(err.strip())
 
-
-    print ('Writing to deps.png')
-    with open('deps.png', 'wb') as f:
+    quiet_print('Writing to ' + output, quiet)
+    with open(output, 'wb') as f:
         f.write(png)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Create dependency trees')
+    parser.add_argument('query', nargs='+',
+                        help='Taskwarrior query')
+    parser.add_argument('-o', '--output', default='deps.png',
+                        help='output filename')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='suppress output messages')
+
+    args = parser.parse_args()
+    main(args.query, args.output, args.quiet)
