@@ -121,7 +121,7 @@ def main(query, output, quiet):
             style = 'filled'
 
             if datum['status'] == 'pending':
-                prefix = str(datum['id']) + '\: '
+                prefix = str(datum['id']) + r'\: '
                 if not datum.get('depends', ''):
                     color = COLOR_UNBLOCKED
                 else:
